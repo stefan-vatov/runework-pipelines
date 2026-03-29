@@ -8,15 +8,15 @@ import { runPipeline } from 'runework/pipelines'
 
 import {
   createAgentStreamReporter,
-  emitDogfoodJob,
-  emitDogfoodRun,
-  type DogfoodProgressEvent,
+  emitPipelineJob,
+  emitPipelineRun,
+  type RunnerProgressEvent,
 } from './index.ts'
 
-test('lib exports shared dogfood progress helpers', () => {
+test('lib exports shared pipeline progress helpers', () => {
   assert.equal(typeof createAgentStreamReporter, 'function')
-  assert.equal(typeof emitDogfoodJob, 'function')
-  assert.equal(typeof emitDogfoodRun, 'function')
+  assert.equal(typeof emitPipelineJob, 'function')
+  assert.equal(typeof emitPipelineRun, 'function')
 })
 
 test('consumer-authored pipelines can mix runework-pipelines/lib helpers with runework primitives', async (t) => {
@@ -38,14 +38,14 @@ test('consumer-authored pipelines can mix runework-pipelines/lib helpers with ru
 import { defineWorkflowPipeline } from 'runework/pipelines'
 import {
   createAgentStreamReporter,
-  emitDogfoodJob,
-  emitDogfoodRun,
+  emitPipelineJob,
+  emitPipelineRun,
 } from 'runework-pipelines/lib'
 
 export default defineWorkflowPipeline({
   version: 1,
   async run(ctx) {
-    emitDogfoodRun(ctx, {
+    emitPipelineRun(ctx, {
       pipelineName: 'custom-mixed',
       title: 'Custom Mixed',
       subtitle: 'fixture',
@@ -61,7 +61,7 @@ export default defineWorkflowPipeline({
       provider: 'codex',
     })
 
-    emitDogfoodJob(ctx, {
+    emitPipelineJob(ctx, {
       id: 'custom:summary',
       label: 'custom summary',
       group: 'custom',
@@ -77,7 +77,7 @@ export default defineWorkflowPipeline({
     reporter.flush()
 
     const outputPath = await ctx.writeOutput('summary.txt', 'custom helper import works')
-    emitDogfoodJob(ctx, {
+    emitPipelineJob(ctx, {
       id: 'custom:summary',
       label: 'custom summary',
       group: 'custom',
@@ -92,10 +92,10 @@ export default defineWorkflowPipeline({
 
   await writeFile(join(runeworkDir, 'pipelines', 'custom-mixed.ts'), pipelineSource, 'utf8')
 
-  const events: DogfoodProgressEvent[] = []
+  const events: RunnerProgressEvent[] = []
   const result = await runPipeline('custom-mixed', runeworkDir, {
     onProgress(event) {
-      events.push(event as DogfoodProgressEvent)
+      events.push(event as RunnerProgressEvent)
     },
     log: () => {},
   })
@@ -118,15 +118,15 @@ export default defineWorkflowPipeline({
 
   assert.deepEqual(
     events.map((event) => event.type),
-    ['dogfood:run', 'dogfood:job', 'dogfood:output', 'dogfood:output', 'dogfood:job'],
+    ['pipeline:run', 'pipeline:job', 'pipeline:output', 'pipeline:output', 'pipeline:job'],
   )
 
   const runEvent = events[0]
-  assert.equal(runEvent.type, 'dogfood:run')
+  assert.equal(runEvent.type, 'pipeline:run')
   assert.equal(runEvent.pipelineName, 'custom-mixed')
 
-  const launchLine = events.find((event) => event.type === 'dogfood:output' && event.text === 'launching codex...')
+  const launchLine = events.find((event) => event.type === 'pipeline:output' && event.text === 'launching codex...')
   assert.ok(launchLine)
-  const thinkingLine = events.find((event) => event.type === 'dogfood:output' && event.text === 'thinking...')
+  const thinkingLine = events.find((event) => event.type === 'pipeline:output' && event.text === 'thinking...')
   assert.ok(thinkingLine)
 })

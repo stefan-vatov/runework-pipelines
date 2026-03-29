@@ -7,9 +7,9 @@ import { join, resolve } from 'node:path'
 import { isDeepStrictEqual } from 'node:util'
 import {
   createAgentStreamReporter,
-  emitDogfoodJob,
-  emitDogfoodRun,
-  type DogfoodJobDescriptor,
+  emitPipelineJob,
+  emitPipelineRun,
+  type PipelineJobDescriptor,
 } from '../lib/index.ts'
 
 const CODEX_MODEL = 'gpt-5.4'
@@ -61,7 +61,7 @@ const pipeline = defineWorkflowPipeline({
   async run(ctx) {
     const config = await buildConfig(ctx.repoRoot)
     await ensureStableConfig(ctx, 'config', config)
-    emitDogfoodRun(ctx, {
+    emitPipelineRun(ctx, {
       pipelineName: 'constitutional-alignment',
       title: 'Constitutional Alignment',
       subtitle: `${ALIGNMENT_CYCLE_COUNT} cycles • ${CODEX_MODEL}`,
@@ -155,7 +155,7 @@ function createAlignmentPhaseContext(
   }
 }
 
-function buildDetectToolsJobDescriptor(): DogfoodJobDescriptor {
+function buildDetectToolsJobDescriptor(): PipelineJobDescriptor {
   return {
     id: 'prepare:detect-tools',
     label: 'detect tools',
@@ -165,7 +165,7 @@ function buildDetectToolsJobDescriptor(): DogfoodJobDescriptor {
   }
 }
 
-function buildAlignmentJobDescriptor(cycle: number): DogfoodJobDescriptor {
+function buildAlignmentJobDescriptor(cycle: number): PipelineJobDescriptor {
   return {
     id: `cycle:${cycle}:align:review-and-fix`,
     label: 'constitutional alignment',
@@ -176,7 +176,7 @@ function buildAlignmentJobDescriptor(cycle: number): DogfoodJobDescriptor {
   }
 }
 
-function buildCommitJobDescriptor(cycle: number): DogfoodJobDescriptor {
+function buildCommitJobDescriptor(cycle: number): PipelineJobDescriptor {
   return {
     id: `cycle:${cycle}:commit:commit-changes`,
     label: 'create commit',
@@ -245,17 +245,17 @@ Your task:
 4. Fix every deviation you find directly in the codebase.
 
 Decision policy:
-- The constitution is the only normative source in this pipeline. Current code, documentation, tests, and dogfood workflows are evidence about the repo, not authority over the constitution.
+- The constitution is the only normative source in this pipeline. Current code, documentation, tests, and repo-local pipeline workflows are evidence about the repo, not authority over the constitution.
 - Do NOT use existing documentation, comments, or current implementation to justify behavior that conflicts with the constitution.
 - Treat documentation as potentially stale or wrong. If docs conflict with the constitution, align docs to the constitution after fixing the underlying code or package surface.
 - Prefer changing implementation to satisfy the constitution over deleting validation that exposes the problem.
-- Treat tests, typechecks, publish checks, smoke tests, and dogfood pipelines as contract evidence, not disposable cleanup targets.
+- Treat tests, typechecks, publish checks, smoke tests, and repo-local pipeline flows as contract evidence, not disposable cleanup targets.
 - If a repo-local workflow is too opinionated or uses the wrong abstraction, rewrite it onto runework primitives instead of removing the coverage it provides.
 - Keep the runtime on primitives, but do not achieve that by weakening verification of existing behavior.
 
 Rules:
-- In this repository, committed .runework/ files are the sanctioned repo-local dogfood and consumer-owned workflow boundary. They are intentionally in-tree for this repo's own development and validation.
-- Do NOT create, move, or rename that repo-local boundary to a separate dogfood/ folder just to make the architecture look cleaner on paper.
+- In this repository, committed .runework/ files are the sanctioned repo-local and consumer-owned workflow boundary. They are intentionally in-tree for this repo's own development and validation.
+- Do NOT create a parallel helper boundary outside .runework/ just to make the architecture look cleaner on paper.
 - If a .runework/ file leaks into the published runtime contract, fix the package surface, docs, or validation around publication instead of relocating the repo-local workflow files.
 - Do NOT edit files under .runework/.work/ or any generated pipeline artifacts.
 - Do NOT add features, abstractions, or code beyond what is needed to resolve deviations.
@@ -263,7 +263,7 @@ Rules:
 - Do NOT change tests merely to match a regression or newly introduced behavior.
 - Only remove or substantially rewrite validation when the underlying contract is intentionally removed, and in the same change add equivalent or stronger replacement coverage.
 - If a deviation can be fixed either by changing implementation or by loosening validation, choose the implementation change.
-- If you are unsure whether a test or dogfood workflow is guarding an intentional contract, stop and leave it in place.
+- If you are unsure whether a test or repo-local workflow is guarding an intentional contract, stop and leave it in place.
 - Stay idiomatic to the existing codebase style.
 - If a deviation is ambiguous, favor the constitutional principle over current implementation.
 - Do NOT cite README text, docs prose, or comments as the reason a constitutional deviation is acceptable.
@@ -396,11 +396,11 @@ function summarizeFailureDetail(text: string): string {
 
 async function detectAvailableToolsJob(ctx: AlignmentPhaseContext): Promise<AlignmentStatePatch> {
   const job = buildDetectToolsJobDescriptor()
-  emitDogfoodJob(ctx, job, 'running', 'checking installed CLI tools')
+  emitPipelineJob(ctx, job, 'running', 'checking installed CLI tools')
   const codexAvailable = ctx.config.availableTools.includes('codex')
 
   if (!codexAvailable) {
-    emitDogfoodJob(ctx, job, 'failed', 'codex unavailable')
+    emitPipelineJob(ctx, job, 'failed', 'codex unavailable')
     throw new Error(
       'constitutional-alignment requires Codex CLI because alignment needs writable workspace access and commit retries need full git metadata access. ' +
       'Install codex and try again.',
@@ -417,14 +417,14 @@ async function detectAvailableToolsJob(ctx: AlignmentPhaseContext): Promise<Alig
     ctx.log(`working tree has ${fileCount} dirty file(s) — these will be included in commits`)
   }
 
-  emitDogfoodJob(ctx, job, 'success', ctx.config.availableTools.join(', '))
+  emitPipelineJob(ctx, job, 'success', ctx.config.availableTools.join(', '))
 
   return { codexAvailable }
 }
 
 async function reviewAndFix(ctx: AlignmentPhaseContext): Promise<AlignmentStatePatch> {
   const job = buildAlignmentJobDescriptor(ctx.cycle)
-  emitDogfoodJob(ctx, job, 'running', `cycle ${ctx.cycle}`)
+  emitPipelineJob(ctx, job, 'running', `cycle ${ctx.cycle}`)
   const prompt = buildAlignmentPrompt(ctx.config.constitutionText)
   const streamReporter = createAgentStreamReporter(ctx, job)
 
@@ -456,7 +456,7 @@ async function reviewAndFix(ctx: AlignmentPhaseContext): Promise<AlignmentStateP
   const detail = ok ? `${text.split('\n').length} lines` : summarizeFailureDetail(text)
 
   ctx.log(`alignment: ${ok ? 'done' : 'failed'} (${detail}) → ${path}`)
-  emitDogfoodJob(
+  emitPipelineJob(
     ctx,
     job,
     ok ? 'success' : 'failed',
@@ -474,7 +474,7 @@ async function reviewAndFix(ctx: AlignmentPhaseContext): Promise<AlignmentStateP
 
 async function commitChanges(ctx: AlignmentPhaseContext): Promise<AlignmentStatePatch> {
   const job = buildCommitJobDescriptor(ctx.cycle)
-  emitDogfoodJob(ctx, job, 'running', 'staging changes')
+  emitPipelineJob(ctx, job, 'running', 'staging changes')
   await $({ cwd: ctx.repoRoot, quiet: true })`git add -A`
 
   if (!await hasStagedChanges(ctx.repoRoot)) {
@@ -482,7 +482,7 @@ async function commitChanges(ctx: AlignmentPhaseContext): Promise<AlignmentState
     await ctx.writePhaseOutput('commit-result.md', text)
     const path = await ctx.writeOutput('commit-result.md', text)
     ctx.log('no changes to commit — skipping')
-    emitDogfoodJob(ctx, job, 'success', 'no changes to commit')
+    emitPipelineJob(ctx, job, 'success', 'no changes to commit')
     return {
       commitPath: path,
       commitOk: true,
@@ -501,7 +501,7 @@ async function commitChanges(ctx: AlignmentPhaseContext): Promise<AlignmentState
     const prompt = attempt === 1
       ? COMMIT_PROMPT
       : buildRetryCommitPrompt(lastFailure!, lastCreatedCommit)
-    emitDogfoodJob(
+    emitPipelineJob(
       ctx,
       job,
       'running',
@@ -546,7 +546,7 @@ async function commitChanges(ctx: AlignmentPhaseContext): Promise<AlignmentState
         await ctx.writePhaseOutput('commit-result.md', resultText)
         const path = await ctx.writeOutput('commit-result.md', resultText)
         ctx.log(`committed: ${message.trim()} → ${path}`)
-        emitDogfoodJob(ctx, job, 'success', message.trim())
+        emitPipelineJob(ctx, job, 'success', message.trim())
         return {
           commitText: text,
           commitPath: path,
@@ -591,7 +591,7 @@ async function commitChanges(ctx: AlignmentPhaseContext): Promise<AlignmentState
   const failText = `Commit failed after ${COMMIT_MAX_ATTEMPTS} attempts.\nLast failure: ${lastFailure}`
   await ctx.writePhaseOutput('commit-result.md', failText)
   const failPath = await ctx.writeOutput('commit-result.md', failText)
-  emitDogfoodJob(ctx, job, 'failed', lastFailure)
+  emitPipelineJob(ctx, job, 'failed', lastFailure)
   throw new Error(`Commit failed after ${COMMIT_MAX_ATTEMPTS} attempts: ${lastFailure} — see ${failPath}`)
 }
 

@@ -14,7 +14,7 @@ test('package manifest keeps the committed runework dependency on GitHub', async
     await readFile(join(process.cwd(), 'package.json'), 'utf8'),
   ) as { dependencies?: Record<string, string> }
 
-  assert.equal(packageJson.dependencies?.runework, 'github:stefan-vatov/runework')
+  assert.equal(packageJson.dependencies?.runework, 'github:stefan-vatov/runework#v0.2.0')
 })
 
 test('defaultLocalRuneworkPath points at the sibling runework package checkout', () => {

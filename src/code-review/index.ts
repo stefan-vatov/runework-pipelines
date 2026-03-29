@@ -7,9 +7,9 @@ import { isDeepStrictEqual } from 'node:util'
 
 import {
   createAgentStreamReporter,
-  emitDogfoodJob,
-  emitDogfoodRun,
-  type DogfoodJobDescriptor,
+  emitPipelineJob,
+  emitPipelineRun,
+  type PipelineJobDescriptor,
 } from '../lib/index.ts'
 
 type ReviewerName = 'claude' | 'codex' | 'opencode'
@@ -68,7 +68,7 @@ const pipeline = defineWorkflowPipeline({
   async run(ctx) {
     const config = await buildReviewConfig(ctx.options)
     await ensureStableConfig(ctx, 'config', config)
-    emitDogfoodRun(ctx, {
+    emitPipelineRun(ctx, {
       pipelineName: 'code-review',
       title: 'Code Review',
       subtitle: `${config.cycles} cycle${config.cycles === 1 ? '' : 's'} • ${config.fix ? 'fix on' : 'fix off'}`,
@@ -260,7 +260,7 @@ function createReviewPhaseContext(
 function buildReviewJobDescriptor(
   cycle: number,
   reviewer: 'claude' | 'codex' | 'opencode',
-): DogfoodJobDescriptor {
+): PipelineJobDescriptor {
   return {
     id: `cycle:${cycle}:review:${reviewer}`,
     label: `${reviewer} review`,
@@ -271,7 +271,7 @@ function buildReviewJobDescriptor(
   }
 }
 
-function buildCollectDiffJobDescriptor(cycle: number): DogfoodJobDescriptor {
+function buildCollectDiffJobDescriptor(cycle: number): PipelineJobDescriptor {
   return {
     id: `cycle:${cycle}:review:collect-diff`,
     label: 'collect diff',
@@ -284,7 +284,7 @@ function buildCollectDiffJobDescriptor(cycle: number): DogfoodJobDescriptor {
 function buildSynthesisJobDescriptor(
   cycle: number,
   provider?: string,
-): DogfoodJobDescriptor {
+): PipelineJobDescriptor {
   return {
     id: `cycle:${cycle}:review:synthesize`,
     label: 'synthesize review',
@@ -295,7 +295,7 @@ function buildSynthesisJobDescriptor(
   }
 }
 
-function buildFixJobDescriptor(cycle: number): DogfoodJobDescriptor {
+function buildFixJobDescriptor(cycle: number): PipelineJobDescriptor {
   return {
     id: `cycle:${cycle}:fix:apply-fixes`,
     label: 'apply fixes',
@@ -306,7 +306,7 @@ function buildFixJobDescriptor(cycle: number): DogfoodJobDescriptor {
   }
 }
 
-function buildDetectToolsJobDescriptor(): DogfoodJobDescriptor {
+function buildDetectToolsJobDescriptor(): PipelineJobDescriptor {
   return {
     id: 'prepare:detect-tools',
     label: 'detect tools',
@@ -640,7 +640,7 @@ async function gitStdout(
 
 async function detectAvailableTools(ctx: ReviewPhaseContext): Promise<ReviewStatePatch> {
   const job = buildDetectToolsJobDescriptor()
-  emitDogfoodJob(ctx, job, 'running', 'checking installed CLI tools')
+  emitPipelineJob(ctx, job, 'running', 'checking installed CLI tools')
 
   const reviewers = ctx.config.availableTools.map((name) => ({
     name,
@@ -650,7 +650,7 @@ async function detectAvailableTools(ctx: ReviewPhaseContext): Promise<ReviewStat
 
   if (reviewers.length === 0) {
     const message = 'No supported AI CLI tools found. Install codex, claude, or opencode.'
-    emitDogfoodJob(ctx, job, 'failed', 'no supported tools')
+    emitPipelineJob(ctx, job, 'failed', 'no supported tools')
     throw new Error(message)
   }
 
@@ -660,7 +660,7 @@ async function detectAvailableTools(ctx: ReviewPhaseContext): Promise<ReviewStat
     ctx.log('fixer: codex unavailable — writable fix runs will be skipped')
   }
 
-  emitDogfoodJob(
+  emitPipelineJob(
     ctx,
     job,
     'success',
@@ -672,7 +672,7 @@ async function detectAvailableTools(ctx: ReviewPhaseContext): Promise<ReviewStat
 
 async function collectDiff(ctx: ReviewPhaseContext): Promise<ReviewStatePatch> {
   const job = buildCollectDiffJobDescriptor(ctx.cycle)
-  emitDogfoodJob(ctx, job, 'running', `scope: ${ctx.config.scope}`)
+  emitPipelineJob(ctx, job, 'running', `scope: ${ctx.config.scope}`)
   const scope = ctx.config.scope
 
   let diff: string
@@ -688,7 +688,7 @@ async function collectDiff(ctx: ReviewPhaseContext): Promise<ReviewStatePatch> {
     }
   } catch (error) {
     const detail = error instanceof Error ? error.message : String(error)
-    emitDogfoodJob(ctx, job, 'failed', detail)
+    emitPipelineJob(ctx, job, 'failed', detail)
     throw error
   }
 
@@ -696,7 +696,7 @@ async function collectDiff(ctx: ReviewPhaseContext): Promise<ReviewStatePatch> {
     ctx.log('no changes to review — skipping')
     const noChangeText = '# No changes to review\n\nThe diff was empty for this iteration.'
     await ctx.writePhaseOutput('final-review.md', noChangeText)
-    emitDogfoodJob(ctx, job, 'success', 'no changes to review')
+    emitPipelineJob(ctx, job, 'success', 'no changes to review')
 
     if (ctx.state.hasReviewedDiff) {
       ctx.log('preserving previous final review output from the last substantive iteration')
@@ -717,7 +717,7 @@ async function collectDiff(ctx: ReviewPhaseContext): Promise<ReviewStatePatch> {
   }
 
   ctx.log(`diff collected: ${diff.split('\n').length} lines (scope: ${ctx.config.scope})`)
-  emitDogfoodJob(ctx, job, 'success', `${diff.split('\n').length} lines`)
+  emitPipelineJob(ctx, job, 'success', `${diff.split('\n').length} lines`)
 
   return {
     currentDiff: diff,
@@ -733,7 +733,7 @@ function makeReviewJob(adapterName: 'claude' | 'codex' | 'opencode') {
 
   return async (ctx: ReviewPhaseContext): Promise<ReviewStatePatch> => {
     const job = buildReviewJobDescriptor(ctx.cycle, adapterName)
-    emitDogfoodJob(ctx, job, 'running', `launching ${adapterName}`)
+    emitPipelineJob(ctx, job, 'running', `launching ${adapterName}`)
 
     const adapter = getReviewAdapter(ctx, adapterName)
     const prompt = REVIEW_PROMPT + ctx.state.currentDiff
@@ -764,7 +764,7 @@ function makeReviewJob(adapterName: 'claude' | 'codex' | 'opencode') {
     const detail = ok ? `${text.split('\n').length} lines` : summarizeFailureDetail(text)
 
     ctx.log(`${adapterName}: ${ok ? 'done' : 'failed'} (${detail}) → ${path}`)
-    emitDogfoodJob(
+    emitPipelineJob(
       ctx,
       job,
       ok ? 'success' : 'failed',
@@ -810,7 +810,7 @@ async function synthesize(ctx: ReviewPhaseContext): Promise<ReviewStatePatch> {
 
   if (reviews.length === 0) {
     const job = buildSynthesisJobDescriptor(ctx.cycle)
-    emitDogfoodJob(ctx, job, 'failed', 'no successful reviews')
+    emitPipelineJob(ctx, job, 'failed', 'no successful reviews')
     const text = '[error] No successful reviews to synthesize'
     await ctx.writePhaseOutput('final-review.md', text)
     const path = await ctx.writeOutput('final-review.md', text)
@@ -820,7 +820,7 @@ async function synthesize(ctx: ReviewPhaseContext): Promise<ReviewStatePatch> {
   if (reviews.length === 1) {
     const review = reviews[0]
     const job = buildSynthesisJobDescriptor(ctx.cycle, review.name)
-    emitDogfoodJob(ctx, job, 'success', `single reviewer: ${review.name}`)
+    emitPipelineJob(ctx, job, 'success', `single reviewer: ${review.name}`)
     await ctx.writePhaseOutput('final-review.md', review.text)
     const path = await ctx.writeOutput('final-review.md', review.text)
     ctx.log(`single reviewer (${review.name}) — using as final review`)
@@ -842,7 +842,7 @@ async function synthesize(ctx: ReviewPhaseContext): Promise<ReviewStatePatch> {
   }
 
   const job = buildSynthesisJobDescriptor(ctx.cycle, synthesizerName)
-  emitDogfoodJob(ctx, job, 'running', `${reviews.length} reviews`)
+  emitPipelineJob(ctx, job, 'running', `${reviews.length} reviews`)
   const synthesizer = getReviewAdapter(ctx, synthesizerName)
   const streamReporter = createAgentStreamReporter(ctx, job)
   let result
@@ -856,7 +856,7 @@ async function synthesize(ctx: ReviewPhaseContext): Promise<ReviewStatePatch> {
     })
   } catch (error) {
     if (isAbortError(error)) throw error
-    emitDogfoodJob(
+    emitPipelineJob(
       ctx,
       job,
       'failed',
@@ -872,7 +872,7 @@ async function synthesize(ctx: ReviewPhaseContext): Promise<ReviewStatePatch> {
   const detail = result.ok ? `${reviews.length} reviews merged` : summarizeFailureDetail(result.text)
 
   ctx.log(`synthesis: ${result.ok ? 'done' : 'failed'} (${detail}) → ${path}`)
-  emitDogfoodJob(
+  emitPipelineJob(
     ctx,
     job,
     result.ok ? 'success' : 'failed',
@@ -888,7 +888,7 @@ async function synthesize(ctx: ReviewPhaseContext): Promise<ReviewStatePatch> {
 
 async function applyFixes(ctx: ReviewPhaseContext): Promise<ReviewStatePatch> {
   const job = buildFixJobDescriptor(ctx.cycle)
-  emitDogfoodJob(ctx, job, 'running', 'evaluating review findings')
+  emitPipelineJob(ctx, job, 'running', 'evaluating review findings')
   const finalReview = ctx.state.finalReviewText
 
   let text: string
@@ -944,7 +944,7 @@ async function applyFixes(ctx: ReviewPhaseContext): Promise<ReviewStatePatch> {
     : summarizeFailureDetail(text)
 
   ctx.log(`fix: ${ok ? 'done' : 'failed'} (${detail}) → ${path}`)
-  emitDogfoodJob(
+  emitPipelineJob(
     ctx,
     job,
     ok ? 'success' : 'failed',

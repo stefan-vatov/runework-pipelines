@@ -1,15 +1,15 @@
 import { safeJsonParse, type AgentOutputChunk } from 'runework'
 import type { PipelineProgressEvent } from 'runework/pipelines'
 
-export type DogfoodJobStatus =
+export type PipelineJobStatus =
   | 'running'
   | 'success'
   | 'failed'
   | 'skipped'
   | 'cached'
 
-export type DogfoodRunProgressEvent = {
-  type: 'dogfood:run'
+export type PipelineRunProgressEvent = {
+  type: 'pipeline:run'
   pipelineName: string
   title: string
   subtitle?: string
@@ -17,7 +17,7 @@ export type DogfoodRunProgressEvent = {
   resumed: boolean
 }
 
-export type DogfoodJobDescriptor = {
+export type PipelineJobDescriptor = {
   id: string
   label: string
   group: string
@@ -26,32 +26,32 @@ export type DogfoodJobDescriptor = {
   cycle?: number
 }
 
-export type DogfoodJobProgressEvent = {
-  type: 'dogfood:job'
+export type PipelineJobProgressEvent = {
+  type: 'pipeline:job'
   jobId: string
   label: string
   group: string
   order: number
-  status: DogfoodJobStatus
+  status: PipelineJobStatus
   detail?: string
   provider?: string
   cycle?: number
 }
 
-export type DogfoodOutputProgressEvent = {
-  type: 'dogfood:output'
+export type PipelineOutputProgressEvent = {
+  type: 'pipeline:output'
   jobId: string
   provider?: string
   stream: 'stdout' | 'stderr'
   text: string
 }
 
-export type DogfoodProgressEvent =
-  | DogfoodRunProgressEvent
-  | DogfoodJobProgressEvent
-  | DogfoodOutputProgressEvent
+export type RunnerProgressEvent =
+  | PipelineRunProgressEvent
+  | PipelineJobProgressEvent
+  | PipelineOutputProgressEvent
 
-type DogfoodProgressSink = {
+type PipelineProgressSink = {
   progress(event: PipelineProgressEvent): void
 }
 
@@ -66,8 +66,8 @@ function normalizeText(value: unknown): string | undefined {
 }
 
 function emitProgress(
-  sink: DogfoodProgressSink,
-  event: DogfoodProgressEvent,
+  sink: PipelineProgressSink,
+  event: RunnerProgressEvent,
 ): void {
   sink.progress(event as PipelineProgressEvent)
 }
@@ -112,15 +112,15 @@ function extractJsonTexts(value: unknown): string[] {
 }
 
 function emitOutputLines(
-  sink: DogfoodProgressSink,
-  job: DogfoodJobDescriptor,
+  sink: PipelineProgressSink,
+  job: PipelineJobDescriptor,
   stream: 'stdout' | 'stderr',
   text: string,
 ): void {
   for (const line of text.replace(/\r\n/g, '\n').split('\n')) {
     if (!line.trim()) continue
     emitProgress(sink, {
-      type: 'dogfood:output',
+      type: 'pipeline:output',
       jobId: job.id,
       provider: job.provider,
       stream,
@@ -130,8 +130,8 @@ function emitOutputLines(
 }
 
 function flushLines(
-  sink: DogfoodProgressSink,
-  job: DogfoodJobDescriptor,
+  sink: PipelineProgressSink,
+  job: PipelineJobDescriptor,
   stream: 'stdout' | 'stderr',
   buffer: string,
   parseJson: boolean,
@@ -157,21 +157,21 @@ function flushLines(
   return remaining
 }
 
-export function emitDogfoodRun(
-  sink: DogfoodProgressSink,
-  event: Omit<DogfoodRunProgressEvent, 'type'>,
+export function emitPipelineRun(
+  sink: PipelineProgressSink,
+  event: Omit<PipelineRunProgressEvent, 'type'>,
 ): void {
-  emitProgress(sink, { type: 'dogfood:run', ...event })
+  emitProgress(sink, { type: 'pipeline:run', ...event })
 }
 
-export function emitDogfoodJob(
-  sink: DogfoodProgressSink,
-  job: DogfoodJobDescriptor,
-  status: DogfoodJobStatus,
+export function emitPipelineJob(
+  sink: PipelineProgressSink,
+  job: PipelineJobDescriptor,
+  status: PipelineJobStatus,
   detail?: string,
 ): void {
   emitProgress(sink, {
-    type: 'dogfood:job',
+    type: 'pipeline:job',
     jobId: job.id,
     label: job.label,
     group: job.group,
@@ -184,8 +184,8 @@ export function emitDogfoodJob(
 }
 
 export function createAgentStreamReporter(
-  sink: DogfoodProgressSink,
-  job: DogfoodJobDescriptor,
+  sink: PipelineProgressSink,
+  job: PipelineJobDescriptor,
 ): {
   onOutputChunk(chunk: AgentOutputChunk): void
   flush(): void

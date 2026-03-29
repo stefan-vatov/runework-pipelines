@@ -1,11 +1,11 @@
 export {
   createAgentStreamReporter,
-  emitDogfoodJob,
-  emitDogfoodRun,
-  type DogfoodJobDescriptor,
-  type DogfoodJobProgressEvent,
-  type DogfoodJobStatus,
-  type DogfoodOutputProgressEvent,
-  type DogfoodProgressEvent,
-  type DogfoodRunProgressEvent,
-} from './dogfood-progress.ts'
+  emitPipelineJob,
+  emitPipelineRun,
+  type PipelineJobDescriptor,
+  type PipelineJobProgressEvent,
+  type PipelineJobStatus,
+  type PipelineOutputProgressEvent,
+  type RunnerProgressEvent,
+  type PipelineRunProgressEvent,
+} from './pipeline-progress.ts'

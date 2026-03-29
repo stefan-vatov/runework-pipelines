@@ -5,8 +5,25 @@
   "type": "module",
   "license": "MIT",
   "description": "ready-made workflows and bootstrap helpers for runework",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/stefan-vatov/runework-pipelines.git"
+  },
+  "bugs": {
+    "url": "https://github.com/stefan-vatov/runework-pipelines/issues"
+  },
+  "homepage": "https://github.com/stefan-vatov/runework-pipelines#readme",
+  "keywords": [
+    "runework",
+    "pipeline",
+    "workflow",
+    "ai"
+  ],
   "engines": {
     "node": ">=24"
+  },
+  "publishConfig": {
+    "access": "public"
   },
   "exports": {
     ".": {
@@ -28,29 +45,42 @@
       "source": "./src/lib/index.ts",
       "types": "./dist/lib/index.d.ts",
       "default": "./dist/lib/index.js"
+    },
+    "./runner": {
+      "source": "./src/runner/index.ts",
+      "types": "./dist/runner/index.d.ts",
+      "default": "./dist/runner/index.js"
     }
   },
   "files": [
     "dist",
+    "README.md",
+    "LICENSE",
     "src/index.ts",
     "src/bootstrap.ts",
-    "src/code-review",
-    "src/constitutional-alignment",
-    "src/lib",
-    "scripts"
+    "src/code-review/index.ts",
+    "src/constitutional-alignment/index.ts",
+    "src/runner/index.ts",
+    "src/lib/index.ts",
+    "src/lib/pipeline-progress.ts",
+    "scripts/install-local-runework.mjs"
   ],
   "scripts": {
     "build": "node ./scripts/build.mjs",
     "test": "node --conditions=source --test \"src/**/*.test.ts\"",
     "typecheck": "tsc -b",
     "lint": "eslint .",
+    "release": "node ./scripts/release.mjs",
     "install:local-runework": "node ./scripts/install-local-runework.mjs"
   },
   "dependencies": {
-    "runework": "github:stefan-vatov/runework"
+    "ink": "^6.8.0",
+    "react": "^19.2.0",
+    "runework": "github:stefan-vatov/runework#v0.2.0"
   },
   "devDependencies": {
     "@types/node": "^22.0.0",
+    "@types/react": "^19.2.0",
     "eslint": "^9.0.0",
     "typescript": "^5.7.0",
     "typescript-eslint": "^8.0.0"

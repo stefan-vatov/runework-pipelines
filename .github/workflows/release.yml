@@ -1,0 +1,77 @@
+name: Release
+
+on:
+  workflow_run:
+    workflows:
+      - CI
+    types:
+      - completed
+
+concurrency:
+  group: release-${{ github.event.workflow_run.head_branch }}
+  cancel-in-progress: false
+
+env:
+  GITHUB_ACTIONS_BOT_NAME: github-actions[bot]
+  GITHUB_ACTIONS_BOT_EMAIL: 41898282+github-actions[bot]@users.noreply.github.com
+
+jobs:
+  release:
+    if: github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.head_branch == 'main'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout main
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Skip stale workflow runs
+        id: freshness
+        shell: bash
+        run: |
+          current_sha="$(git rev-parse HEAD)"
+          if [ "$current_sha" != "${{ github.event.workflow_run.head_sha }}" ]; then
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+            echo "Current main is $current_sha, workflow run was for ${{ github.event.workflow_run.head_sha }}. Skipping stale release run."
+            exit 0
+          fi
+
+      - name: Skip release commits
+        id: release_commit
+        if: steps.freshness.outputs.skip != 'true'
+        shell: bash
+        run: |
+          subject="$(git log -1 --pretty=%s)"
+          if [[ "$subject" == chore\(release\):\ publish* ]]; then
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+            echo "Release commit detected, skipping."
+            exit 0
+          fi
+
+      - name: Setup Node
+        if: steps.freshness.outputs.skip != 'true' && steps.release_commit.outputs.skip != 'true'
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Install dependencies
+        if: steps.freshness.outputs.skip != 'true' && steps.release_commit.outputs.skip != 'true'
+        run: npm ci --ignore-scripts
+
+      - name: Configure git
+        if: steps.freshness.outputs.skip != 'true' && steps.release_commit.outputs.skip != 'true'
+        run: |
+          git config user.name "$GITHUB_ACTIONS_BOT_NAME"
+          git config user.email "$GITHUB_ACTIONS_BOT_EMAIL"
+
+      - name: Create release commit and tag
+        if: steps.freshness.outputs.skip != 'true' && steps.release_commit.outputs.skip != 'true'
+        run: npm run release
+
+      - name: Push release commit and tags
+        if: steps.freshness.outputs.skip != 'true' && steps.release_commit.outputs.skip != 'true'
+        run: git push origin HEAD:main --follow-tags
