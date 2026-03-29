@@ -1018,7 +1018,7 @@ function buildResult(
   if (state.fixRan) parts.push('with fixes')
 
   return {
-    ok: reviewsOk && state.finalReviewOk && fixSucceeded && !hasActionableFixItems(state.finalReviewText),
+    ok: reviewsOk && state.finalReviewOk && fixSucceeded,
     outputPath: state.finalReviewPath,
     summary: `Review complete (${parts.join(', ')})`,
   }

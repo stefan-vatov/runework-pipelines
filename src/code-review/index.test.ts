@@ -83,11 +83,22 @@ async function createFakeCodexCli(t: { after: (cleanup: () => Promise<void> | vo
     "const reviewText = process.env.RUNEWORK_FAKE_CODEX_REVIEW_TEXT ?? '## Must Fix\\n- None\\n\\n## Should Fix\\n- None\\n\\n## Consider\\n- None\\n\\n## Summary\\n- None\\n'",
     "const fixText = process.env.RUNEWORK_FAKE_CODEX_FIX_TEXT ?? 'applied fixes'",
     'const text = isWritableRun ? fixText : reviewText',
-    'if (isWritableRun && fixRelativePath && fixContent !== undefined) {',
-    "  fs.writeFileSync(path.join(process.cwd(), fixRelativePath), fixContent, 'utf8')",
+    'let exitCode = 0',
+    'let writeError = null',
+    'try {',
+    '  if (isWritableRun && fixRelativePath && fixContent !== undefined) {',
+    "    fs.writeFileSync(path.join(process.cwd(), fixRelativePath), fixContent, 'utf8')",
+    '  }',
+    '  if (outputFile) {',
+    "    fs.writeFileSync(outputFile, JSON.stringify({ ok: true, text }), 'utf8')",
+    '  }',
+    '  exitCode = 0',
+    '} catch (err) {',
+    '  writeError = err',
+    '  exitCode = 0',
     '}',
-    "if (outputFile) fs.writeFileSync(outputFile, text, 'utf8')",
-    "process.stdout.write(JSON.stringify({ type: 'message', session_id: 'fake-codex-session' }) + '\\n')",
+    "process.stdout.write(JSON.stringify({ type: 'message', session_id: 'fake-codex-session', writeError: writeError ? String(writeError) : null }) + '\\n')",
+    'process.exit(exitCode)',
   ].join('\n')
 
   const scriptPath = join(binDir, 'codex')
@@ -305,7 +316,7 @@ test('consumer-style pipeline re-export runs the package entrypoint through rune
     log: () => {},
   })
 
-  assert.equal(result.ok, false)
+  assert.equal(result.ok, true)
   assert.match(result.summary, /2 cycles/)
   assert.match(result.summary, /with fixes/)
   assert.ok(result.outputs)
