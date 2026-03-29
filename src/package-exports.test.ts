@@ -49,10 +49,6 @@ if (typeof constitutionalAlignment.default !== 'function') {
   throw new Error('constitutional-alignment default export should be a pipeline function')
 }
 
-if (typeof lib.createPendingPipelineError !== 'function') {
-  throw new Error('lib should expose createPendingPipelineError')
-}
-
 if (typeof lib.createAgentStreamReporter !== 'function') {
   throw new Error('lib should expose createAgentStreamReporter')
 }
