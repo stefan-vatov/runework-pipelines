@@ -590,11 +590,7 @@ function isRuneworkArtifactPath(path: string): boolean {
 }
 
 async function getFullDiff(repoRoot: string): Promise<string> {
-  const tracked = await gitStdout(
-    repoRoot,
-    ['diff', 'HEAD', '--', '.', `:(exclude)${RUNEWORK_WORK_DIR}/**`],
-    'Failed to gather tracked changes',
-  )
+  const tracked = await getTrackedDiff(repoRoot)
   const untrackedList = await gitStdout(
     repoRoot,
     ['ls-files', '--others', '--exclude-standard'],
@@ -621,6 +617,47 @@ async function getFullDiff(repoRoot: string): Promise<string> {
   }
 
   return [tracked, untrackedDiff].filter(Boolean).join('\n')
+}
+
+async function getTrackedDiff(repoRoot: string): Promise<string> {
+  const headCheck = await $({ cwd: repoRoot, nothrow: true, quiet: true })`git rev-parse --verify HEAD`
+
+  if ((headCheck.exitCode ?? 0) === 0) {
+    return gitStdout(
+      repoRoot,
+      ['diff', 'HEAD', '--', '.', `:(exclude)${RUNEWORK_WORK_DIR}/**`],
+      'Failed to gather tracked changes',
+    )
+  }
+
+  const trackedFiles = await gitStdout(
+    repoRoot,
+    ['ls-files', '--cached', '--modified', '--deduplicate', '--', '.', `:(exclude)${RUNEWORK_WORK_DIR}/**`],
+    'Failed to list tracked changes',
+  )
+
+  const files = trackedFiles
+    .split('\n')
+    .map((file) => file.trim())
+    .filter(Boolean)
+    .filter((file) => !isRuneworkArtifactPath(file))
+
+  if (files.length === 0) {
+    return ''
+  }
+
+  const diffs = await Promise.all(
+    files.map((file) =>
+      gitStdout(
+        repoRoot,
+        ['diff', '--no-index', '--', '/dev/null', file],
+        `Failed to diff tracked file "${file}"`,
+        [0, 1],
+      ),
+    ),
+  )
+
+  return diffs.filter(Boolean).join('\n')
 }
 
 async function gitStdout(
