@@ -83,22 +83,11 @@ async function createFakeCodexCli(t: { after: (cleanup: () => Promise<void> | vo
     "const reviewText = process.env.RUNEWORK_FAKE_CODEX_REVIEW_TEXT ?? '## Must Fix\\n- None\\n\\n## Should Fix\\n- None\\n\\n## Consider\\n- None\\n\\n## Summary\\n- None\\n'",
     "const fixText = process.env.RUNEWORK_FAKE_CODEX_FIX_TEXT ?? 'applied fixes'",
     'const text = isWritableRun ? fixText : reviewText',
-    'let exitCode = 0',
-    'let writeError = null',
-    'try {',
-    '  if (isWritableRun && fixRelativePath && fixContent !== undefined) {',
-    "    fs.writeFileSync(path.join(process.cwd(), fixRelativePath), fixContent, 'utf8')",
-    '  }',
-    '  if (outputFile) {',
-    "    fs.writeFileSync(outputFile, JSON.stringify({ ok: true, text }), 'utf8')",
-    '  }',
-    '  exitCode = 0',
-    '} catch (err) {',
-    '  writeError = err',
-    '  exitCode = 0',
+    'if (isWritableRun && fixRelativePath && fixContent !== undefined) {',
+    "  fs.writeFileSync(path.join(process.cwd(), fixRelativePath), fixContent, 'utf8')",
     '}',
-    "process.stdout.write(JSON.stringify({ type: 'message', session_id: 'fake-codex-session', writeError: writeError ? String(writeError) : null }) + '\\n')",
-    'process.exit(exitCode)',
+    "if (outputFile) fs.writeFileSync(outputFile, text, 'utf8')",
+    "process.stdout.write(JSON.stringify({ type: 'message', session_id: 'fake-codex-session' }) + '\\n')",
   ].join('\n')
 
   const scriptPath = join(binDir, 'codex')
@@ -199,6 +188,7 @@ async function createConsumerRuneworkRepo(t: { after: (cleanup: () => Promise<vo
   await symlink(process.cwd(), join(runeworkDir, 'node_modules', 'runework-pipelines'), 'dir')
   await writeFile(join(repoRoot, 'README.md'), '# temp repo\n', 'utf8')
   await writeFile(join(repoRoot, '.gitignore'), '.runework/node_modules/\n.runework/.work/\n', 'utf8')
+
   assertSucceeded(runCommand('git', ['init', '-b', 'main'], repoRoot), 'git init failed')
   assertSucceeded(runCommand('git', ['config', 'user.name', 'Runework Pipelines Tests'], repoRoot), 'git user.name failed')
   assertSucceeded(runCommand('git', ['config', 'user.email', 'runework-pipelines@example.com'], repoRoot), 'git user.email failed')
@@ -330,56 +320,4 @@ test('consumer-style pipeline re-export runs the package entrypoint through rune
     .filter((entry) => entry.args.includes('exec'))
   assert.equal(execInvocations.length, 3)
   assert.equal(execInvocations.filter((entry) => entry.args.includes('workspace-write')).length, 1)
-})
-
-test('consumer-style pipeline re-export handles a fresh repo without HEAD', async (t) => {
-  const { runPipeline } = await import('../../../runework/packages/runework/src/pipelines/index.ts')
-  const { repoRoot, runeworkDir } = await createConsumerRuneworkRepo(t)
-  const fakeCodex = await createFakeCodexCli(t)
-
-  withFakeCodexEnv(t, {
-    binDir: fakeCodex.binDir,
-    logPath: fakeCodex.logPath,
-    reviewText: [
-      '## Must Fix',
-      '- None',
-      '',
-      '## Should Fix',
-      '- None',
-      '',
-      '## Consider',
-      '- None',
-      '',
-      '## Summary',
-      '- Initial review succeeded in a fresh repo.',
-      '',
-    ].join('\n'),
-  })
-
-  await rm(join(repoRoot, '.git'), { recursive: true, force: true })
-  assertSucceeded(runCommand('git', ['init', '-b', 'main'], repoRoot), 'git init failed')
-  assertSucceeded(runCommand('git', ['config', 'user.name', 'Runework Pipelines Tests'], repoRoot), 'git user.name failed')
-  assertSucceeded(runCommand('git', ['config', 'user.email', 'runework-pipelines@example.com'], repoRoot), 'git user.email failed')
-  await writeFile(join(repoRoot, 'README.md'), '# temp repo\nfresh change\n', 'utf8')
-
-  const result = await runPipeline('code-review', runeworkDir, {
-    log: () => {},
-  })
-
-  assert.equal(result.ok, false)
-  assert.match(result.summary, /Review complete \(3 models, 2 cycles\)/i)
-
-  const finalReview = await readFile(result.outputs!['final-review.md'], 'utf8')
-  assert.match(finalReview, /## Must Fix/)
-  assert.match(finalReview, /- None/)
-  assert.doesNotMatch(finalReview, /Failed to gather tracked changes/)
-
-  const readmeOutput = await readFile(join(repoRoot, 'README.md'), 'utf8')
-  assert.equal(readmeOutput, '# temp repo\nfresh change\n')
-
-  const execInvocations = (await readFakeCliInvocations(fakeCodex.logPath))
-    .filter((entry) => entry.args.includes('exec'))
-  assert.equal(execInvocations.length, 4)
-  assert.equal(execInvocations.filter((entry) => entry.args.includes('workspace-write')).length, 0)
-  assert.ok(execInvocations.some((entry) => entry.stdin.includes('+++ b/README.md')))
 })

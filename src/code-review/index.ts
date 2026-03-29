@@ -590,7 +590,11 @@ function isRuneworkArtifactPath(path: string): boolean {
 }
 
 async function getFullDiff(repoRoot: string): Promise<string> {
-  const tracked = await getTrackedDiff(repoRoot)
+  const tracked = await gitStdout(
+    repoRoot,
+    ['diff', 'HEAD', '--', '.', `:(exclude)${RUNEWORK_WORK_DIR}/**`],
+    'Failed to gather tracked changes',
+  )
   const untrackedList = await gitStdout(
     repoRoot,
     ['ls-files', '--others', '--exclude-standard'],
@@ -617,47 +621,6 @@ async function getFullDiff(repoRoot: string): Promise<string> {
   }
 
   return [tracked, untrackedDiff].filter(Boolean).join('\n')
-}
-
-async function getTrackedDiff(repoRoot: string): Promise<string> {
-  const headCheck = await $({ cwd: repoRoot, nothrow: true, quiet: true })`git rev-parse --verify HEAD`
-
-  if ((headCheck.exitCode ?? 0) === 0) {
-    return gitStdout(
-      repoRoot,
-      ['diff', 'HEAD', '--', '.', `:(exclude)${RUNEWORK_WORK_DIR}/**`],
-      'Failed to gather tracked changes',
-    )
-  }
-
-  const trackedFiles = await gitStdout(
-    repoRoot,
-    ['ls-files', '--cached', '--modified', '--deduplicate', '--', '.', `:(exclude)${RUNEWORK_WORK_DIR}/**`],
-    'Failed to list tracked changes',
-  )
-
-  const files = trackedFiles
-    .split('\n')
-    .map((file) => file.trim())
-    .filter(Boolean)
-    .filter((file) => !isRuneworkArtifactPath(file))
-
-  if (files.length === 0) {
-    return ''
-  }
-
-  const diffs = await Promise.all(
-    files.map((file) =>
-      gitStdout(
-        repoRoot,
-        ['diff', '--no-index', '--', '/dev/null', file],
-        `Failed to diff tracked file "${file}"`,
-        [0, 1],
-      ),
-    ),
-  )
-
-  return diffs.filter(Boolean).join('\n')
 }
 
 async function gitStdout(
@@ -1011,14 +974,25 @@ function buildResult(
   }
 
   const reviewsOk = reviewResults.length > 0 && reviewResults.every((review) => review.ok)
-  const fixSucceeded = !config.fix || state.fixOk
   const parts = [`${reviewResults.length} model${reviewResults.length !== 1 ? 's' : ''}`]
 
   if (config.cycles > 1) parts.push(`${config.cycles} cycles`)
   if (state.fixRan) parts.push('with fixes')
 
+  // When fixes have run, the fix result (fixOk) is the authoritative success signal,
+  // not the pre-fix finalReviewOk which may reflect stale review text.
+  // This avoids the regression where successful fix-enabled executions returned ok: false
+  // because the final review text was captured before fixes were applied.
+  if (state.fixRan) {
+    return {
+      ok: state.fixOk,
+      outputPath: state.finalReviewPath,
+      summary: `Review complete (${parts.join(', ')})`,
+    }
+  }
+
   return {
-    ok: reviewsOk && state.finalReviewOk && fixSucceeded,
+    ok: reviewsOk && state.finalReviewOk,
     outputPath: state.finalReviewPath,
     summary: `Review complete (${parts.join(', ')})`,
   }
