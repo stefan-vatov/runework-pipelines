@@ -1,0 +1,40 @@
+{
+  "name": "runework-pipelines",
+  "private": false,
+  "version": "0.1.0",
+  "type": "module",
+  "license": "MIT",
+  "description": "ready-made workflows and bootstrap helpers for runework",
+  "engines": {
+    "node": ">=24"
+  },
+  "exports": {
+    ".": {
+      "source": "./src/index.ts",
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "src/index.ts",
+    "src/bootstrap.ts",
+    "scripts"
+  ],
+  "scripts": {
+    "build": "node ./scripts/build.mjs",
+    "test": "node --conditions=source --test \"src/**/*.test.ts\"",
+    "typecheck": "tsc -b",
+    "lint": "eslint .",
+    "install:local-runework": "node ./scripts/install-local-runework.mjs"
+  },
+  "dependencies": {
+    "runework": "github:stefan-vatov/runework"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "eslint": "^9.0.0",
+    "typescript": "^5.7.0",
+    "typescript-eslint": "^8.0.0"
+  }
+}
