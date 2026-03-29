@@ -13,12 +13,30 @@
       "source": "./src/index.ts",
       "types": "./dist/index.d.ts",
       "default": "./dist/index.js"
+    },
+    "./code-review": {
+      "source": "./src/code-review/index.ts",
+      "types": "./dist/code-review/index.d.ts",
+      "default": "./dist/code-review/index.js"
+    },
+    "./constitutional-alignment": {
+      "source": "./src/constitutional-alignment/index.ts",
+      "types": "./dist/constitutional-alignment/index.d.ts",
+      "default": "./dist/constitutional-alignment/index.js"
+    },
+    "./lib": {
+      "source": "./src/lib/index.ts",
+      "types": "./dist/lib/index.d.ts",
+      "default": "./dist/lib/index.js"
     }
   },
   "files": [
     "dist",
     "src/index.ts",
     "src/bootstrap.ts",
+    "src/code-review",
+    "src/constitutional-alignment",
+    "src/lib",
     "scripts"
   ],
   "scripts": {
