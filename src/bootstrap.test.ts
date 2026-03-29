@@ -9,12 +9,12 @@ import {
   toLocalRuneworkInstallSpec,
 } from './index.ts'
 
-test('package manifest keeps the committed runework dependency on GitHub', async () => {
+test('package manifest declares runework as a peer dependency', async () => {
   const packageJson = JSON.parse(
     await readFile(join(process.cwd(), 'package.json'), 'utf8'),
-  ) as { dependencies?: Record<string, string> }
+  ) as { peerDependencies?: Record<string, string> }
 
-  assert.equal(packageJson.dependencies?.runework, 'github:stefan-vatov/runework#v0.2.0')
+  assert.equal(packageJson.peerDependencies?.runework, '>=0.2.0 <1')
 })
 
 test('defaultLocalRuneworkPath points at the sibling runework package checkout', () => {

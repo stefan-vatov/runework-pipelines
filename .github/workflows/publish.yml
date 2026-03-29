@@ -12,11 +12,20 @@ jobs:
       contents: write
     steps:
       - uses: actions/checkout@v4
+      - uses: actions/checkout@v4
+        with:
+          repository: stefan-vatov/runework
+          path: runework
       - uses: actions/setup-node@v4
         with:
           node-version: 24
           cache: npm
       - run: npm ci --ignore-scripts
+        working-directory: runework
+      - run: npm run build:all
+        working-directory: runework
+      - run: npm ci --ignore-scripts
+      - run: node ./scripts/install-local-runework.mjs --runework-path ../runework/packages/runework
       - run: npm run build
       - run: npm test
       - run: npm pack

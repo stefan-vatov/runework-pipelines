@@ -28,6 +28,12 @@ jobs:
           ref: main
           fetch-depth: 0
 
+      - name: Checkout runework
+        uses: actions/checkout@v4
+        with:
+          repository: stefan-vatov/runework
+          path: runework
+
       - name: Skip stale workflow runs
         id: freshness
         shell: bash
@@ -61,6 +67,20 @@ jobs:
       - name: Install dependencies
         if: steps.freshness.outputs.skip != 'true' && steps.release_commit.outputs.skip != 'true'
         run: npm ci --ignore-scripts
+        working-directory: runework
+
+      - name: Build runework
+        if: steps.freshness.outputs.skip != 'true' && steps.release_commit.outputs.skip != 'true'
+        run: npm run build:all
+        working-directory: runework
+
+      - name: Install pipeline repo dependencies
+        if: steps.freshness.outputs.skip != 'true' && steps.release_commit.outputs.skip != 'true'
+        run: npm ci --ignore-scripts
+
+      - name: Install local runework for release
+        if: steps.freshness.outputs.skip != 'true' && steps.release_commit.outputs.skip != 'true'
+        run: node ./scripts/install-local-runework.mjs --runework-path ../runework/packages/runework
 
       - name: Configure git
         if: steps.freshness.outputs.skip != 'true' && steps.release_commit.outputs.skip != 'true'

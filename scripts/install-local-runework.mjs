@@ -1,5 +1,7 @@
 #!/usr/bin/env node
 import { spawn } from 'node:child_process'
+import { mkdir, rm, symlink } from 'node:fs/promises'
+import { join } from 'node:path'
 
 import { createLocalRuneworkInstallPlan } from '../src/bootstrap.ts'
 
@@ -26,17 +28,21 @@ function normalizeCommand(command) {
   return command
 }
 
-const plan = createLocalRuneworkInstallPlan(process.argv.slice(2))
+async function linkLocalRunework(runeworkPath, cwd) {
+  const nodeModulesPath = join(cwd, 'node_modules')
+  const linkPath = join(nodeModulesPath, 'runework')
 
-const installCode = await run(
-  npmCommand,
-  ['install', '--no-save', plan.installSpec],
-  process.cwd(),
-)
-
-if (installCode !== 0) {
-  process.exit(installCode)
+  await mkdir(nodeModulesPath, { recursive: true })
+  await rm(linkPath, { recursive: true, force: true })
+  await symlink(
+    runeworkPath,
+    linkPath,
+    process.platform === 'win32' ? 'junction' : 'dir',
+  )
 }
+
+const plan = createLocalRuneworkInstallPlan(process.argv.slice(2))
+await linkLocalRunework(plan.runeworkPath, process.cwd())
 
 if (plan.command.length === 0) {
   process.exit(0)

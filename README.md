@@ -3,6 +3,7 @@
 Ready-made pipeline implementations and pipeline runner helpers for `runework`.
 
 Pre-launch distribution is GitHub-tag based. Consumers should install tagged GitHub refs instead of npm registry versions.
+`runework` is a peer dependency, so consumers install both packages explicitly.
 
 ## Install
 
@@ -18,7 +19,7 @@ Pre-launch distribution is GitHub-tag based. Consumers should install tagged Git
 For local development against a sibling `runework` checkout:
 
 ```bash
-npm run install:local-runework
+node ./scripts/install-local-runework.mjs --runework-path ../runework/packages/runework
 ```
 
 ## Usage
