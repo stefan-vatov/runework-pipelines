@@ -1,0 +1,78 @@
+{
+  "name": "runework",
+  "private": false,
+  "version": "0.2.0",
+  "type": "module",
+  "license": "MIT",
+  "description": "thin zx runtime for durable AI CLI workflows across providers",
+  "publishConfig": {
+    "access": "public"
+  },
+  "bin": {
+    "runework-run": "bin/runework-run.js",
+    "runework-detect": "bin/runework-detect.js",
+    "runework-init": "bin/runework-init.js",
+    "runework-pipeline": "bin/runework-pipeline.js"
+  },
+  "exports": {
+    ".": {
+      "source": "./src/index.ts",
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./adapters": {
+      "source": "./src/adapters/index.ts",
+      "types": "./dist/adapters/index.d.ts",
+      "default": "./dist/adapters/index.js"
+    },
+    "./core": {
+      "source": "./src/core/index.ts",
+      "types": "./dist/core/index.d.ts",
+      "default": "./dist/core/index.js"
+    },
+    "./pipelines": {
+      "source": "./src/pipelines/index.ts",
+      "types": "./dist/pipelines/index.d.ts",
+      "default": "./dist/pipelines/index.js"
+    },
+    "./zx": {
+      "source": "./src/zx.ts",
+      "types": "./dist/zx.d.ts",
+      "default": "./dist/zx.js"
+    }
+  },
+  "files": [
+    "bin",
+    "dist/adapters",
+    "dist/cli",
+    "dist/core",
+    "dist/index.d.ts",
+    "dist/index.js",
+    "dist/pipelines",
+    "dist/zx.d.ts",
+    "dist/zx.js",
+    "src/adapters",
+    "src/core",
+    "src/pipelines",
+    "src/index.ts",
+    "src/zx.ts",
+    "templates",
+    "README.md",
+    "LICENSE"
+  ],
+  "engines": {
+    "node": ">=24"
+  },
+  "dependencies": {
+    "@runework/cli": "0.2.0",
+    "@runework/core": "0.2.0",
+    "@runework/pipelines": "0.2.0",
+    "zx": "^8.0.0"
+  },
+  "bundleDependencies": [
+    "zx",
+    "@runework/core",
+    "@runework/pipelines",
+    "@runework/cli"
+  ]
+}

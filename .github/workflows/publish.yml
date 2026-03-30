@@ -5,6 +5,9 @@ on:
     tags:
       - 'v*'
 
+env:
+  RUNEWORK_TARBALL_URL: https://github.com/stefan-vatov/runework/releases/download/v0.2.0/runework-0.2.0.tgz
+
 jobs:
   publish:
     runs-on: ubuntu-latest
@@ -12,20 +15,17 @@ jobs:
       contents: write
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/checkout@v4
-        with:
-          repository: stefan-vatov/runework
-          path: runework
       - uses: actions/setup-node@v4
         with:
           node-version: 24
           cache: npm
       - run: npm ci --ignore-scripts
-        working-directory: runework
-      - run: npm run build:all
-        working-directory: runework
-      - run: npm ci --ignore-scripts
-      - run: node ./scripts/install-local-runework.mjs --runework-path ../runework/packages/runework
+      - name: Link released runework artifact
+        run: |
+          mkdir -p .ci/runework node_modules
+          curl -L "$RUNEWORK_TARBALL_URL" -o .ci/runework.tgz
+          tar -xzf .ci/runework.tgz -C .ci/runework
+          ln -sfn "$PWD/.ci/runework/package" node_modules/runework
       - run: npm run build
       - run: npm test
       - run: npm pack

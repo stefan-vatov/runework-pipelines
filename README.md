@@ -10,7 +10,7 @@ Pre-launch distribution is GitHub-tag based. Consumers should install tagged Git
 ```json
 {
   "dependencies": {
-    "runework": "github:stefan-vatov/runework#v0.2.0",
+    "runework": "https://github.com/stefan-vatov/runework/releases/download/v0.2.0/runework-0.2.0.tgz",
     "runework-pipelines": "github:stefan-vatov/runework-pipelines#v0.1.0"
   }
 }
