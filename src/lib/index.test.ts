@@ -4,14 +4,13 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import test from 'node:test'
 
-import { runPipeline } from 'runework/pipelines'
-
 import {
   createAgentStreamReporter,
   emitPipelineJob,
   emitPipelineRun,
   type RunnerProgressEvent,
 } from './index.ts'
+import { runPipeline, runeworkPackageRoot } from '../test-support/runework.ts'
 
 test('lib exports shared pipeline progress helpers', () => {
   assert.equal(typeof createAgentStreamReporter, 'function')
@@ -30,8 +29,7 @@ test('consumer-authored pipelines can mix runework-pipelines/lib helpers with ru
   await mkdir(join(runeworkDir, 'pipelines'), { recursive: true })
   await mkdir(join(runeworkDir, 'node_modules'), { recursive: true })
 
-  const runeworkPackagePath = join(process.cwd(), '..', 'runework', 'packages', 'runework')
-  await symlink(runeworkPackagePath, join(runeworkDir, 'node_modules', 'runework'), 'dir')
+  await symlink(runeworkPackageRoot, join(runeworkDir, 'node_modules', 'runework'), 'dir')
   await symlink(process.cwd(), join(runeworkDir, 'node_modules', 'runework-pipelines'), 'dir')
 
   const pipelineSource = `

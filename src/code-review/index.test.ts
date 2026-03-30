@@ -13,6 +13,8 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import test from 'node:test'
 
+import { runPipeline, runeworkPackageRoot } from '../test-support/runework.ts'
+
 function runCommand(
   command: string,
   args: string[],
@@ -181,7 +183,7 @@ async function createConsumerRuneworkRepo(t: { after: (cleanup: () => Promise<vo
     'utf8',
   )
   await symlink(
-    join(process.cwd(), '..', 'runework', 'packages', 'runework'),
+    runeworkPackageRoot,
     join(runeworkDir, 'node_modules', 'runework'),
     'dir',
   )
@@ -210,7 +212,6 @@ test('code-review package entrypoint exports a runnable workflow', async () => {
 })
 
 test('code-review rejects resume when invocation flags change', async (t) => {
-  const { runPipeline } = await import('../../../runework/packages/runework/src/pipelines/index.ts')
   const { runeworkDir } = await createConsumerRuneworkRepo(t)
   const fakeCodex = await createFakeCodexCli(t)
 
@@ -274,7 +275,6 @@ test('code-review rejects resume when invocation flags change', async (t) => {
 })
 
 test('consumer-style pipeline re-export runs the package entrypoint through runework runtime', async (t) => {
-  const { runPipeline } = await import('../../../runework/packages/runework/src/pipelines/index.ts')
   const { repoRoot, runeworkDir } = await createConsumerRuneworkRepo(t)
   const fakeCodex = await createFakeCodexCli(t)
 

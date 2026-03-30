@@ -13,6 +13,8 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import test from 'node:test'
 
+import { runPipeline, runeworkPackageRoot } from '../test-support/runework.ts'
+
 function runCommand(
   command: string,
   args: string[],
@@ -263,7 +265,7 @@ async function createConsumerAlignmentRepo(t: { after: (cleanup: () => Promise<v
     'utf8',
   )
   await symlink(
-    join(process.cwd(), '..', 'runework', 'packages', 'runework'),
+    runeworkPackageRoot,
     join(runeworkDir, 'node_modules', 'runework'),
     'dir',
   )
@@ -309,7 +311,6 @@ test('constitutional-alignment exports alignment constants for external referenc
 // Consumer-style thin re-export tests
 
 test('consumer-style constitutional-alignment re-export runs the package entrypoint through runework runtime', async (t) => {
-  const { runPipeline } = await import('../../../runework/packages/runework/src/pipelines/index.ts')
   const { runeworkDir } = await createConsumerAlignmentRepo(t)
   const fakeCodex = await createFakeCodexCli(t)
 
@@ -348,7 +349,6 @@ test('consumer-style constitutional-alignment re-export runs the package entrypo
 // Commit retry tests
 
 test('constitutional-alignment retries commit on failure up to COMMIT_MAX_ATTEMPTS', async (t) => {
-  const { runPipeline } = await import('../../../runework/packages/runework/src/pipelines/index.ts')
   const { repoRoot, runeworkDir } = await createConsumerAlignmentRepo(t)
   const fakeCodex = await createFakeCodexCli(t)
   const commitStatePath = join(repoRoot, 'commit-state.txt')
@@ -378,7 +378,6 @@ test('constitutional-alignment retries commit on failure up to COMMIT_MAX_ATTEMP
 })
 
 test('constitutional-alignment retries commit when first message is invalid but second is valid', async (t) => {
-  const { runPipeline } = await import('../../../runework/packages/runework/src/pipelines/index.ts')
   const { repoRoot, runeworkDir } = await createConsumerAlignmentRepo(t)
   const fakeCodex = await createFakeCodexCli(t)
   const commitStatePath = join(repoRoot, 'commit-state.txt')
@@ -409,7 +408,6 @@ test('constitutional-alignment retries commit when first message is invalid but 
 // Commit message validation tests
 
 test('constitutional-alignment rejects non-lowercase commit messages', async (t) => {
-  const { runPipeline } = await import('../../../runework/packages/runework/src/pipelines/index.ts')
   const { repoRoot, runeworkDir } = await createConsumerAlignmentRepo(t)
   const fakeCodex = await createFakeCodexCli(t)
 
@@ -433,7 +431,6 @@ test('constitutional-alignment rejects non-lowercase commit messages', async (t)
 })
 
 test('constitutional-alignment rejects malformed conventional commit format', async (t) => {
-  const { runPipeline } = await import('../../../runework/packages/runework/src/pipelines/index.ts')
   const { runeworkDir } = await createConsumerAlignmentRepo(t)
   const fakeCodex = await createFakeCodexCli(t)
 
@@ -453,7 +450,6 @@ test('constitutional-alignment rejects malformed conventional commit format', as
 })
 
 test('constitutional-alignment rejects multi-line commit messages', async (t) => {
-  const { runPipeline } = await import('../../../runework/packages/runework/src/pipelines/index.ts')
   const { runeworkDir } = await createConsumerAlignmentRepo(t)
   const fakeCodex = await createFakeCodexCli(t)
 
@@ -475,7 +471,6 @@ test('constitutional-alignment rejects multi-line commit messages', async (t) =>
 // Rollback semantics tests
 
 test('constitutional-alignment rolls back an invalid commit when retries fail', async (t) => {
-  const { runPipeline } = await import('../../../runework/packages/runework/src/pipelines/index.ts')
   const { repoRoot, runeworkDir } = await createConsumerAlignmentRepo(t)
   const fakeCodex = await createFakeCodexCli(t)
   const commitStatePath = join(repoRoot, 'commit-state.txt')
@@ -508,7 +503,6 @@ test('constitutional-alignment rolls back an invalid commit when retries fail', 
 })
 
 test('constitutional-alignment rolls back and preserves staged changes after rollback', async (t) => {
-  const { runPipeline } = await import('../../../runework/packages/runework/src/pipelines/index.ts')
   const { repoRoot, runeworkDir } = await createConsumerAlignmentRepo(t)
   const fakeCodex = await createFakeCodexCli(t)
   const commitStatePath = join(repoRoot, 'commit-state.txt')
@@ -541,7 +535,6 @@ test('constitutional-alignment rolls back and preserves staged changes after rol
 // Alignment-only scenarios
 
 test('constitutional-alignment skips commit when no changes after alignment', async (t) => {
-  const { runPipeline } = await import('../../../runework/packages/runework/src/pipelines/index.ts')
   const { repoRoot, runeworkDir } = await createConsumerAlignmentRepo(t)
   const fakeCodex = await createFakeCodexCli(t)
 
