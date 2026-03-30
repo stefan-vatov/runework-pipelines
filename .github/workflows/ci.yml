@@ -10,9 +10,6 @@ concurrency:
   group: ci-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
 
-env:
-  RUNEWORK_TARBALL_URL: https://github.com/stefan-vatov/runework/releases/download/v0.2.0/runework-0.2.0.tgz
-
 jobs:
   checks:
     runs-on: ubuntu-latest
@@ -26,15 +23,21 @@ jobs:
           - npm test
     steps:
       - uses: actions/checkout@v4
+      - name: Checkout runework main
+        uses: actions/checkout@v4
+        with:
+          repository: stefan-vatov/runework
+          ref: main
+          path: .ci/runework
       - uses: actions/setup-node@v4
         with:
           node-version: 24
           cache: npm
       - run: npm ci --ignore-scripts
-      - name: Link released runework artifact
+      - name: Install runework workspace dependencies
+        working-directory: .ci/runework
+        run: npm ci --ignore-scripts
+      - name: Link runework main checkout
         run: |
-          mkdir -p .ci/runework node_modules
-          curl -L "$RUNEWORK_TARBALL_URL" -o .ci/runework.tgz
-          tar -xzf .ci/runework.tgz -C .ci/runework
-          ln -sfn "$PWD/.ci/runework/package" node_modules/runework
+          node ./scripts/install-local-runework.mjs --runework-path .ci/runework/packages/runework
       - run: ${{ matrix.command }}

@@ -14,7 +14,6 @@ concurrency:
 env:
   GITHUB_ACTIONS_BOT_NAME: github-actions[bot]
   GITHUB_ACTIONS_BOT_EMAIL: 41898282+github-actions[bot]@users.noreply.github.com
-  RUNEWORK_TARBALL_URL: https://github.com/stefan-vatov/runework/releases/download/v0.2.0/runework-0.2.0.tgz
 
 jobs:
   release:
@@ -28,6 +27,13 @@ jobs:
         with:
           ref: main
           fetch-depth: 0
+
+      - name: Checkout runework main
+        uses: actions/checkout@v4
+        with:
+          repository: stefan-vatov/runework
+          ref: main
+          path: .ci/runework
 
       - name: Skip stale workflow runs
         id: freshness
@@ -63,13 +69,15 @@ jobs:
         if: steps.freshness.outputs.skip != 'true' && steps.release_commit.outputs.skip != 'true'
         run: npm ci --ignore-scripts
 
-      - name: Link released runework artifact
+      - name: Install runework workspace dependencies
+        if: steps.freshness.outputs.skip != 'true' && steps.release_commit.outputs.skip != 'true'
+        working-directory: .ci/runework
+        run: npm ci --ignore-scripts
+
+      - name: Link runework main checkout
         if: steps.freshness.outputs.skip != 'true' && steps.release_commit.outputs.skip != 'true'
         run: |
-          mkdir -p .ci/runework node_modules
-          curl -L "$RUNEWORK_TARBALL_URL" -o .ci/runework.tgz
-          tar -xzf .ci/runework.tgz -C .ci/runework
-          ln -sfn "$PWD/.ci/runework/package" node_modules/runework
+          node ./scripts/install-local-runework.mjs --runework-path .ci/runework/packages/runework
 
       - name: Configure git
         if: steps.freshness.outputs.skip != 'true' && steps.release_commit.outputs.skip != 'true'

@@ -2,25 +2,23 @@
 
 Ready-made pipeline implementations and pipeline runner helpers for `runework`.
 
-Pre-launch distribution is GitHub-tag based. Consumers should install tagged GitHub refs instead of npm registry versions.
-`runework` is a peer dependency, so consumers install both packages explicitly.
+Pre-launch development is source-first. This repo expects `runework` to come from a sibling checkout on `main`, and CI does the same.
+`runework` stays a peer dependency so local development can point at a checkout instead of a published package.
 
 ## Install
 
-```json
-{
-  "dependencies": {
-    "runework": "https://github.com/stefan-vatov/runework/releases/download/v0.2.0/runework-0.2.0.tgz",
-    "runework-pipelines": "github:stefan-vatov/runework-pipelines#v0.1.0"
-  }
-}
-```
-
-For local development against a sibling `runework` checkout:
-
 ```bash
+git clone git@github.com:stefan-vatov/runework.git
+git clone git@github.com:stefan-vatov/runework-pipelines.git
+cd runework
+git checkout main
+cd ../runework-pipelines
+git checkout main
+npm ci --ignore-scripts
 node ./scripts/install-local-runework.mjs --runework-path ../runework/packages/runework
 ```
+
+When you need a package spec instead of a sibling checkout, use `runework-pipelines` from `main` and provide `runework` separately.
 
 ## Usage
 

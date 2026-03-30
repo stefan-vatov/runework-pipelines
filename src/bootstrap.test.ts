@@ -14,7 +14,7 @@ test('package manifest declares runework as a peer dependency', async () => {
     await readFile(join(process.cwd(), 'package.json'), 'utf8'),
   ) as { peerDependencies?: Record<string, string> }
 
-  assert.equal(packageJson.peerDependencies?.runework, '>=0.2.0 <1')
+  assert.equal(packageJson.peerDependencies?.runework, '*')
 })
 
 test('defaultLocalRuneworkPath points at the sibling runework package checkout', () => {
